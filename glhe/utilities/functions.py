@@ -320,7 +320,8 @@ def lower_obj(x):
     :return: output object lower-cased
     """
 
-    ignored_fields = ['output-path', 'path', 'g-function-path', 'g_b-function-path']
+    ignored_fields = ['output-path', 'load-data-path',
+                      'path', 'g-function-path', 'g_b-function-path']
 
     if isinstance(x, list):
         return [lower_obj(v) for v in x]

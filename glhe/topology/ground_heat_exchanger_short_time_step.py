@@ -101,9 +101,12 @@ class GroundHeatExchangerSTS(SimulationEntryPoint):
                     ave_pipe_outer_dia += comp.pipe_1.outer_diameter
                     ave_pipe_inner_dia += comp.pipe_1.inner_diameter
                     ave_bh_dia += comp.diameter
-                    ave_bh_resist += comp.calc_bh_average_resistance(temperature=temperature, flow_rate=flow_rate)
-                    ave_pipe_resist += comp.pipe_1.calc_resist(flow_rate=flow_rate, temperature=temperature)
-                    ave_pipe_conv_resist += comp.pipe_1.calc_conv_resist(flow_rate=flow_rate, temperature=temperature)
+                    ave_bh_resist += comp.calc_bh_average_resistance(
+                        temperature=temperature, flow_rate=flow_rate)
+                    ave_pipe_resist += comp.pipe_1.calc_resist(
+                        flow_rate=flow_rate, temperature=temperature)
+                    ave_pipe_conv_resist += comp.pipe_1.calc_conv_resist(
+                        flow_rate=flow_rate, temperature=temperature)
                     ave_pipe_k += comp.pipe_1.conductivity
                     ave_pipe_cp += comp.pipe_1.specific_heat
                     ave_pipe_rho += comp.pipe_1.density
@@ -130,7 +133,7 @@ class GroundHeatExchangerSTS(SimulationEntryPoint):
 
         return d
 
-    def generate_g(self):
+    def generate_g(self, write=True):
         # generate long time-step g-functions
         # these are Eskilson-type g-functions for computing the bh wall temperature rise
         # determine "average" bh
@@ -159,7 +162,8 @@ class GroundHeatExchangerSTS(SimulationEntryPoint):
         if end_time > min_fls_time:
             lntts_lts = np.arange(lntts_start, lntts_end, step=0.1)
             times = np.exp(lntts_lts) * self.ts
-            g_lts = gt.gfunction.uniform_heat_extraction(boreholes, times, self.soil.diffusivity)
+            g_lts = gt.gfunction.uniform_heat_extraction(
+                boreholes, times, self.soil.diffusivity)
 
         # generate sts g-functions using radial-numerical model
         d_ave_bh = self.average_bh()
@@ -183,10 +187,19 @@ class GroundHeatExchangerSTS(SimulationEntryPoint):
                  'length': d_ave_bh['length']}
 
         rn_model = RadialNumericalBH(d_sts)
-        lntts_sts, g_sts = rn_model.calc_sts_g_functions(final_time=min_fls_time, calculate_at_bh_wall=True)
+        lntts_sts, g_sts = rn_model.calc_sts_g_functions(
+            final_time=min_fls_time, calculate_at_bh_wall=True)
 
-        write_arrays_to_csv(os.path.join(self.op.output_dir, 'sts.csv'), [lntts_sts, g_sts])
-        write_arrays_to_csv(os.path.join(self.op.output_dir, 'lts.csv'), [lntts_lts, g_lts])
+        if write:
+            write_arrays_to_csv(os.path.join(
+                self.op.output_dir, 'sts.csv'), [lntts_sts, g_sts])
+            write_arrays_to_csv(os.path.join(
+                self.op.output_dir, 'lts.csv'), [lntts_lts, g_lts])
+        else:
+            self.lntts_sts = lntts_sts
+            self.g_sts = g_sts
+            self.lntts_lts = lntts_lts
+            self.g_lts = g_lts
 
         # merge the lists together
         # TODO: check if smoothing is needed between the two different g-functions
@@ -196,9 +209,11 @@ class GroundHeatExchangerSTS(SimulationEntryPoint):
         # insert a point at a very small time so the interpolation doesn't go off the rails
         self.lntts = np.insert(self.lntts, 0, log(30 / self.ts))
         self.g = np.insert(self.g, 0, 0)
-        write_arrays_to_csv(os.path.join(self.op.output_dir, 'g.csv'), [self.lntts, self.g])
+        if write:
+            write_arrays_to_csv(os.path.join(
+                self.op.output_dir, 'g.csv'), [self.lntts, self.g])
 
-    def generate_g_b(self, flow_rate=0.5):
+    def generate_g_b(self, flow_rate=0.5, write=True):
 
         q = 10  # W/m
         flow_rate = flow_rate
@@ -252,9 +267,12 @@ class GroundHeatExchangerSTS(SimulationEntryPoint):
             lntts_b.append(log(end_time / self.ts))
             g_b.append(g_b[-1])
 
-        self.lntts_b, self.g_b = resample_g_functions(lntts_b, g_b, lntts_interval=0.1)
+        self.lntts_b, self.g_b = resample_g_functions(
+            lntts_b, g_b, lntts_interval=0.1)
 
-        write_arrays_to_csv(os.path.join(self.op.output_dir, 'g_b.csv'), [self.lntts_b, self.g_b])
+        if write:
+            write_arrays_to_csv(os.path.join(self.op.output_dir, 'g_b.csv'), [
+                                self.lntts_b, self.g_b])
 
     def calc_bh_ave_length(self):
         valid_bh_types = [ComponentTypes.BoreholeSingleUTubeGrouted]
@@ -291,7 +309,8 @@ class GroundHeatExchangerSTS(SimulationEntryPoint):
 
         # TODO: update bh wall temp
         # self.bh_wall_temperature = self.soil.get_temp(time, self.h)
-        self.bh_wall_temperature = self.soil.get_temp(time, self.h) + self.calc_bh_wall_temp_rise(time, time_step)
+        self.bh_wall_temperature = self.soil.get_temp(
+            time, self.h) + self.calc_bh_wall_temp_rise(time, time_step)
 
         # TODO: distribute flow properly
 
@@ -299,7 +318,8 @@ class GroundHeatExchangerSTS(SimulationEntryPoint):
                                                    self.bh_wall_temperature)
         path_responses = []
         for path in self.paths:
-            path_responses.append(path.simulate_time_step(path_inlet_conditions))
+            path_responses.append(
+                path.simulate_time_step(path_inlet_conditions))
 
         outlet_temp = self.mix_paths(path_responses)
 

@@ -47,12 +47,14 @@ class PlantLoop(object):
         # set the time step
         # can only set the time steps per hour or the time step
         try:
-            self.time_step = num_ts_per_hour_to_sec_per_ts(self.ip.input_dict['simulation']['time-steps-per-hour'])
+            self.time_step = num_ts_per_hour_to_sec_per_ts(
+                self.ip.input_dict['simulation']['time-steps-per-hour'])
         except KeyError:
             try:
                 self.time_step = self.ip.input_dict['simulation']['time-step']
             except KeyError:
-                raise KeyError("'simulation' object must contain either 'time-steps-per-hour' or 'time-step' field.")
+                raise KeyError(
+                    "'simulation' object must contain either 'time-steps-per-hour' or 'time-step' field.")
 
         self.demand_comps = []
         self.supply_comps = []
@@ -63,32 +65,40 @@ class PlantLoop(object):
     def initialize_plant_loop_topology(self) -> None:
 
         for comp in self.ip.input_dict['topology']['demand-side']:
-            self.demand_comps.append(make_plant_loop_component(comp, self.ip, self.op))
+            self.demand_comps.append(
+                make_plant_loop_component(comp, self.ip, self.op))
 
         for comp in self.ip.input_dict['topology']['supply-side']:
-            self.supply_comps.append(make_plant_loop_component(comp, self.ip, self.op))
+            self.supply_comps.append(
+                make_plant_loop_component(comp, self.ip, self.op))
 
-    def simulate(self) -> bool:
+    def simulate(self, printing=False) -> bool:
         """
         Do the entire time stepping simulation of the plant loop
         """
 
         current_sim_time = 0
+        print('preparation')
 
         while True:
             self.do_one_time_step(current_sim_time, self.time_step)
             current_sim_time += self.time_step
             self.collect_outputs(current_sim_time)
+            if printing:
+                print("simulated time step {} from total {}".format(
+                    current_sim_time, self.end_sim_time))
 
             if current_sim_time >= self.end_sim_time:
                 break
 
         self.op.write_to_file()
 
-        print('Simulation time: {}'.format(dt.datetime.now() - self.start_time))
+        print('Simulation time: {}'.format(
+            dt.datetime.now() - self.start_time))
 
         with open('{}.txt'.format(os.path.join(self.op.output_dir, self.op.output_file[:-4])), 'w+') as f:
-            f.write('Simulation time: {}\n'.format(dt.datetime.now() - self.start_time))
+            f.write('Simulation time: {}\n'.format(
+                dt.datetime.now() - self.start_time))
 
         return True
 
@@ -99,7 +109,8 @@ class PlantLoop(object):
 
         # update demand inlet node and initial conditions
         self.demand_inlet_temp = self.supply_outlet_temp
-        response = SimulationResponse(sim_time, time_step, 0, self.demand_inlet_temp)
+        response = SimulationResponse(
+            sim_time, time_step, 0, self.demand_inlet_temp)
 
         # simulate demand components flow-wise
         for comp in self.demand_comps:
