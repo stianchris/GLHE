@@ -3,6 +3,7 @@ class ComponentTypes(object):
     All simulatable component types
     """
     BoreholeSingleUTubeGrouted = 'SingleUTubeBHGrouted'
+    BTES_interface = "BTESInterface"
     ConstantFlow = 'ConstantFlow'
     ConstantLoad = 'ConstantLoad'
     ConstantTemp = 'ConstantTemp'
