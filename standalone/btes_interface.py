@@ -51,7 +51,7 @@ class BTES_interface(object):
         self.join = os.path.join
         self.norm = os.path.normpath
         if path == "":
-            path = cwd
+            path = self.cwd
 
         # read in the json file
         self.d = load_json(path+"/"+input_json_file)
@@ -63,10 +63,23 @@ class BTES_interface(object):
                                        self.ip,
                                        self.op)
 
+        # operation variables
+        self.time = 0
+        self.timestep = 0
+        self.flow_rate = 0
+        self.temperature = 0
+        self.temp_out = 0
 
-    def operate_btes(self, time, time_step, flow_rate, temperature):
+
+    def operate_btes(self,
+                     time=None,
+                     time_step=None,
+                     flow_rate=None,
+                     temperature=None):
         """
+        Operates the btes for one time step and stores the outputs
 
+        Outputs are stored in self.temp_out for the output temperature.
 
         Parameters
         ----------
@@ -85,11 +98,41 @@ class BTES_interface(object):
 
         """
         # prepare inputs!!
+        if time == None:
+            time = self.time
+        else:
+            self.time = time
+
+        if time_step == None:
+            time_step = self.time_step
+        else:
+            self.time_step = time_step
+
+        if flow_rate == None:
+            flow_rate = self.flow_rate
+        else:
+            self.flow_rate = flow_rate
+
+        if temperature == None:
+            temperature = self.temperature
+        else:
+            self.temperature = temperature
+
+        # for debugging:
+        # print("time:",str(time))
+        # print("time_step:",str(time_step))
+        # print("flow_rate:",str(flow_rate))
+        # print("temperature:",str(temperature))
         inputs = SimulationResponse(time,
                                     time_step,
                                     flow_rate,
                                     temperature)
-        return self.ghe.simulate_time_step(inputs)
+        outputs = self.ghe.simulate_time_step(inputs)
+        # print(outputs.temperature)
+
+        self.temp_out = outputs.temperature
+
+        return outputs
 
 
     def run_sim(self,
@@ -168,56 +211,11 @@ class BTES_interface(object):
 if __name__ == "__main__":
     cwd = os.getcwd()
     join = os.path.join
-    test_dir = "test"
-    btes = BTES_interface("test_file.json", join(cwd, test_dir))
+    test_dir = "test_files"
+    btes = BTES_interface("test_file.json", join(cwd,"..", test_dir))
 
-    # %% test von simulation run - grundsätzliche Funktion.
     now = str(datetime.now())[0:16]
     years_to_sim = 1
-    # btes.run_sim(years_to_sim,
-    #               json_path=join(cwd, test_dir, "test_file.json"),
-    #               loaddata_path=join(cwd, test_dir, "HP_Loads_ODT.csv"),
-    #               add_id=now)
-    # df_self = pd.read_csv(
-    #     join(test_dir, 'out_{}-yr_self{}.csv'.format(years_to_sim, now)),
-    #     index_col=0, parse_dates=True)
-    # test Ergebnisse der Simu plotten
-    # fig = plt.figure()
-
-    # ax = fig.add_subplot(111)
-
-    # cols = [
-    #     # 'GroundHeatExchangerLTS:SELF-GHE:BH Resist. [m-K/W]',
-    #     # 'GroundHeatExchangerLTS:SELF-GHE:Heat Rate [W]',
-    #     'GroundHeatExchangerLTS:SELF-GHE:Inlet Temp. [C]',
-    #     'GroundHeatExchangerLTS:SELF-GHE:Outlet Temp. [C]',
-    #     # 'SwedishHP:SVENSKA VARMMEPUMPE:COP [-]',
-    #     'SwedishHP:SVENSKA VARMMEPUMPE:Outdoor Air Temp. [C]',
-    #     # 'SwedishHP:SVENSKA VARMMEPUMPE:Load-side Heat Rate [W]',
-    #     # 'PlantLoop:Demand Inlet Temp. [C]',
-    #     # 'PlantLoop:Demand Outlet Temp. [C]',
-    #     # 'PlantLoop:Supply Inlet Temp. [C]',
-    #     # 'PlantLoop:Supply Outlet Temp. [C]',
-    #     # 'ConstantFlow:CONSTANT FLOW:Flow Rate [kg/s]',
-    #     # 'SwedishHP:SVENSKA VARMMEPUMPE:Outlet Temp. [C]',
-    #     # 'SwedishHP:SVENSKA VARMMEPUMPE:Inlet Temp. [C]',
-    #     # 'SingleUTubeBHGrouted:AVERAGE-BOREHOLE:Heat Rate [W]',
-    #     # 'SingleUTubeBHGrouted:AVERAGE-BOREHOLE:BH Heat Rate [W]',
-    #     # 'SingleUTubeBHGrouted:AVERAGE-BOREHOLE:Inlet Temp. [C]',
-    #     # 'SingleUTubeBHGrouted:AVERAGE-BOREHOLE:Outlet Temp. [C]',
-    #     # 'SegmentUTubeBHGrouted:BH:average-borehole:Seg:1:Inlet Temp. Leg 1 [C]',
-    #     # 'SegmentUTubeBHGrouted:BH:average-borehole:Seg:1:Inlet Temp. Leg 2 [C]',
-    #     # 'SegmentUTubeBHGrouted:BH:average-borehole:Seg:1:Outlet Temp. Leg 1 [C]',
-    #     # 'SegmentUTubeBHGrouted:BH:average-borehole:Seg:1:Outlet Temp. Leg 2 [C]',
-    #     # 'SegmentUTubeBHGrouted:BH:average-borehole:Seg:2:Outlet Temp. [C]',
-    # ]
-
-    # for col in cols:
-    #     ax.plot(df_self[col], label=col)
-    #     # ax.plot(df_cross[col], label=col+"cross")
-
-    # plt.legend()
-    # plt.show()
 
     # %%
     # test von operate_btes:
@@ -235,7 +233,3 @@ if __name__ == "__main__":
             params = btes.operate_btes((i)*3600, 3600, 0.446, temp)
             print(params.temperature)
             ser.append(params.temperature)
-
-
-# TODO: HP-Load profile ersetzen mit eigenem!
-#       Test der Einbindung in Gesamtmodell! Mit anderen Bibliotheken..
